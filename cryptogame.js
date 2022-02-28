@@ -108,7 +108,6 @@ async function initPlayers(player1, player1Name, player2, player2Name, judge) {
  * @param {object} judge Tozny storage client for the judge.
  */
 async function initJudge(judge) {
-  console.log(judge)
   try {
     const submitted = await judge.writeRecord(
       'judge',
@@ -138,7 +137,7 @@ async function getRound(player, playerId) {
     request.match({ type: 'move', writers: playerId }, 'AND', 'EXACT')
     const resultQuery = await player.search(request)
     const found = await resultQuery.next()
-    return parseInt(found[found.length - 1].data.round)
+    return parseInt(found[found.length - 1].meta.plain.round)
   } catch (e) {
     console.error(e)
   }
@@ -153,18 +152,21 @@ async function getRound(player, playerId) {
  */
 async function recordMove(player, playerName, move) {
   let round = await getRound(player, player.config.clientId) + 1
-  if (isNaN(round))
+  if (isNaN(round)){
     round = 1
+  }
   try {
     const submitted = await player.writeRecord(
       'move',
       {
-        move: move.toLowerCase(),
-        round: round.toString(),
+        move: move.toLowerCase()
+      },
+      {
+        round: round.toString()
       }
     )
     const read = await player.readRecord(submitted.meta.recordId)
-    console.log(`${playerName} recorded ${read.data.move} for round #${read.data.round}`)
+    console.log(`${playerName} recorded ${read.data.move} for round #${read.meta.plain.round}`)
   } catch (e) {
     console.error(e)
   }
@@ -187,7 +189,7 @@ async function getMove(searcher, toSearchId, round) {
     const resultQuery = await searcher.search(request)
     const moves = await resultQuery.next()
     for (let move of moves) {
-      if (parseInt(move.data.round) === parseInt(round)) {
+      if (parseInt(move.meta.plain.round) === parseInt(round)) {
         return move.data.move;
       }
     }
@@ -262,12 +264,14 @@ async function recordWinner(judge, round) {
     const submitted = await judge.writeRecord(
       'winner',
       {
-        winner: winner,
-        round: round.toString(),
+        winner: winner
+      },
+      {
+        round: round.toString()
       }
     )
     const read = await judge.readRecord(submitted.meta.recordId)
-    console.log(`${read.data.winner} submitted for round #${read.data.round}`)
+    console.log(`${read.data.winner} submitted for round #${read.meta.plain.round}`)
   } catch (e) {
     console.error(e)
   }
@@ -334,7 +338,7 @@ async function getWinner(player, round) {
     const resultQuery = await player.search(request)
     const winners = await resultQuery.next()
     for (let winner of winners) {
-      if (winner.data.round === round) {
+      if (winner.meta.plain.round === round) {
         return winner.data.winner;
       }
     }
@@ -432,7 +436,7 @@ async function player(args) {
     const judgeId = args[4]
     let winner = await getWinner(player, round)
     if (winner)
-      console.log(winner)
+      console.log(`Winner for round #${round}: ${winner}`)
   }
 }
 
