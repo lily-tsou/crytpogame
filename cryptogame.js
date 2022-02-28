@@ -36,19 +36,19 @@ async function giveAccess(player1, player2, judge) {
 /**
  * Revoke a record of a given type.
  */
- async function revoke(revoker, revokeFromId, type){
-  try{
-      await revoker.revoke(type, revokeFromId)
-      console.log(`${type} no longer shared with ${revokeFromId}`)
-  }catch(e) {
-      console.error(e)
+async function revoke(revoker, revokeFromId, type) {
+  try {
+    await revoker.revoke(type, revokeFromId)
+    console.log(`${type} no longer shared with ${revokeFromId}`)
+  } catch (e) {
+    console.error(e)
   }
 }
 
 /**
 * Revoke all access granted in initializeParties()
 */
-async function revokeAllAccess(player1, player2, judge){
+async function revokeAllAccess(player1, player2, judge) {
   revoke(player1, judge.config.clientId, 'move')
   revoke(player2, judge.config.clientId, 'move')
   revoke(player2, player1.config.clientId, 'move')
@@ -280,23 +280,23 @@ async function getWinner(player, round) {
 /**
  * Delete all all records of a specified type. 
  */
- async function deleteAllClientRecords(client, type) {
+async function deleteAllClientRecords(client, type) {
   try {
-      const request = new Tozny.types.Search(true)
-      request.match({ type: type })
-      const resultQuery = await client.search(request)
-      const moves = await resultQuery.next()
-      for (let move of moves) 
-          await client.deleteRecord(move.meta.recordId, move.meta.version)
+    const request = new Tozny.types.Search(true)
+    request.match({ type: type })
+    const resultQuery = await client.search(request)
+    const moves = await resultQuery.next()
+    for (let move of moves)
+      await client.deleteRecord(move.meta.recordId, move.meta.version)
   } catch (e) {
-      console.error(e)
+    console.error(e)
   }
 }
 
 /**
 * Delete all game records from all participants.
 */
-async function deleteAllGameRecords(player1, player2, judge){
+async function deleteAllGameRecords(player1, player2, judge) {
   deleteAllClientRecords(judge, 'players')
   deleteAllClientRecords(judge, 'judge')
   deleteAllClientRecords(judge, 'winner')
@@ -310,7 +310,7 @@ async function deleteAllGameRecords(player1, player2, judge){
  * and judge info.
  * Reset: Revoke all record sharing and delete all game records.
  */
- async function game(args) {
+async function game(args) {
   const player1Name = args[2]
   const player1Config = require(args[3])
   const player1 = new Tozny.storage.Client(player1Config)
@@ -320,13 +320,14 @@ async function deleteAllGameRecords(player1, player2, judge){
   const judgeConfig = require(args[6])
   const judge = new Tozny.storage.Client(judgeConfig)
 
-  if(args[1].toLowerCase() === "init"){
-      giveAccess(player1, player2, judge)
-      initPlayers(player1, player1Name, player2, player2Name, judge)
+  if (args[1].toLowerCase() === "init") {
+    giveAccess(player1, player2, judge)
+    initPlayers(player1, player1Name, player2, player2Name, judge)
+    initJudge(judge)
   }
-  else if(args[1].toLowerCase() === "reset"){
-      revokeAllAccess(player1, player2, judge)
-      deleteAllGameRecords(player1, player2, judge)
+  else if (args[1].toLowerCase() === "reset") {
+    revokeAllAccess(player1, player2, judge)
+    deleteAllGameRecords(player1, player2, judge)
   }
 }
 
