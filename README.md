@@ -12,6 +12,7 @@ Where [game-args] are a set of arguments that indicate to the program whether yo
 <h4> All [game-args] and their behavior:</h4>
 <strong>game init player1Name player1config player2Name player2config judgeConfig </strong> <br>
 Sets up the initial game state by sharing all appropriate records and recording the judge and player IDs. <br>
+Note that Player 1 is able to view Player 2's moves, but Player 2 is not able to view Player 1's moves.<br>
 To set up a game with players Alicia and Bruce and judge Clarence: <br>
 <code>node .\cryptogame.js game init Alicia .\aliciaconfig.js Bruce .\bruceconfig.js .\clarenceconfig.js</code><br><br>
 <strong>move playerName playerConfig move</strong><br>
