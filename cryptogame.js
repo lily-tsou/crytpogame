@@ -5,6 +5,10 @@ let moves = ["scissors", "paper", "rock"];
 
 /**
  * Share a record of a given type.
+ * 
+ * @param {object} sharer Tozny storage client sharing their record.
+ * @param {string} receiverId Client ID of the Tozny storage client receiving the record.
+ * @param {string} type The type of record to share.
  */
 async function share(sharer, receiverId, type) {
   try {
@@ -22,6 +26,10 @@ async function share(sharer, receiverId, type) {
  * Player 2's moves can be viewed by Player 1, Player 2, and the judge.
  * The judge's winner decision can be viewed by the judge, Player 1,
  * and Player 2.  
+ * 
+ * @param {object} player1 Tozny storage client for player 1.
+ * @param {object} player1 Tozny storage client for player 2.
+ * @param {object} judge Tozny storage client for the judge.
  */
 async function giveAccess(player1, player2, judge) {
   share(player1, judge.config.clientId, 'move')
@@ -35,6 +43,11 @@ async function giveAccess(player1, player2, judge) {
 
 /**
  * Revoke a record of a given type.
+ * 
+ * @param {object} revoker Tozny storage client revoking their record.
+ * @param {string} revokeFromId Client ID of the Tozny storage client that will no 
+ *                              longer have access to the record.
+ * @param {string} type The type of record to revoke.
  */
 async function revoke(revoker, revokeFromId, type) {
   try {
@@ -46,7 +59,11 @@ async function revoke(revoker, revokeFromId, type) {
 }
 
 /**
-* Revoke all access granted in initializeParties()
+ * Revoke all access granted in initializeParties()
+ * 
+ * @param {object} player1 Tozny storage client for player 1.
+ * @param {object} player1 Tozny storage client for player 2.
+ * @param {object} judge Tozny storage client for the judge.
 */
 async function revokeAllAccess(player1, player2, judge) {
   revoke(player1, judge.config.clientId, 'move')
@@ -59,6 +76,12 @@ async function revokeAllAccess(player1, player2, judge) {
 /**
  * Initialize the players in the judge's records.
  * Set the player IDs and the player names.
+ * 
+ * @param {object} player1 Tozny storage client for player 1.
+ * @param {string} player1Name Player 1's name
+ * @param {object} player1 Tozny storage client for player 2.
+ * @param {string} player2Name Player 2's name
+ * @param {object} judge Tozny storage client for the judge.
  */
 async function initPlayers(player1, player1Name, player2, player2Name, judge) {
   try {
@@ -81,6 +104,8 @@ async function initPlayers(player1, player1Name, player2, player2Name, judge) {
 
 /**
  * Set the judge ID.
+ * 
+ * @param {object} judge Tozny storage client for the judge.
  */
 async function initJudge(judge) {
   console.log(judge)
@@ -101,6 +126,11 @@ async function initJudge(judge) {
 /**
  * Get the current round number of a player (the number of the last
  * round they submitted).
+ * 
+ * @param {object} player Tozny storage client for the player searching for the record.
+ * @param {string} receiverId Client ID of the Tozny storage client whose record is being retrieved.
+ * 
+ * @returns {string} The current round number of a player.
  */
 async function getRound(player, playerId) {
   try {
@@ -116,6 +146,10 @@ async function getRound(player, playerId) {
 
 /**
  * Submit a record of type `move`.
+ * 
+ * @param {object} player Tozny storage client for the player recording a move.
+ * @param {string} playerName The player's name.
+ * @param {string} move The game move to be submitted bye the player.
  */
 async function recordMove(player, playerName, move) {
   let round = await getRound(player, player.config.clientId) + 1
@@ -138,6 +172,13 @@ async function recordMove(player, playerName, move) {
 
 /**
  * Get a player's move for a specified round.
+ * 
+ * @param {object} searcher Tozny storage client for the party searching for a move.
+ *                          This may be a player or the judge.
+ * @param {string} toSearchId Client ID of the Tozny storage client whose record is being retrieved.
+ * @param {int|string} round The game round to search for.
+ * 
+ * @returns {string} The move of a player for round `round`.
  */
 async function getMove(searcher, toSearchId, round) {
   try {
@@ -158,6 +199,13 @@ async function getMove(searcher, toSearchId, round) {
 
 /**
  * Get the info (names or IDs) of the players.
+ * 
+ * @param {object} judge Tozny storage client for the judge.
+ * @param {string} type The type of player info to search for. 
+ *                      name: Returns the names of the players.
+ *                      id: Returns the IDs of the players
+ * 
+ * @returns {string[]} Either the two player names or the two player IDs.
  */
 async function getPlayerInfo(judge, type) {
   try {
@@ -180,6 +228,11 @@ async function getPlayerInfo(judge, type) {
 /**
  * Determine the winner of a round using these rules:
  * Rock beats scissors, scissors beats paper, paper beats rock.
+ * 
+ * @param {object} judge Tozny storage client for the judge.
+ * @param {string} round The number of the round to be judged.
+ * 
+ * @returns {string} The name of the winner.
  */
 async function determineWinner(judge, round) {
   let playerIds = await getPlayerInfo(judge, "id")
@@ -199,6 +252,9 @@ async function determineWinner(judge, round) {
 
 /**
  * Submit a record of type `winner`.
+ * 
+ * @param {object} judge Tozny storage client for the judge.
+ * @param {string} round The number of the round to be recorded.
  */
 async function recordWinner(judge, round) {
   let winner = await determineWinner(judge, round)
@@ -222,6 +278,9 @@ async function recordWinner(judge, round) {
  * If a player has their opponent's ID and access to their `move` records, then
  * that player is able to look up their opponents latest move and submit a counter 
  * move that will beat it.
+ * 
+ * @param {object} player Tozny storage client for the player searching for the record.
+ * @param {string} player2Id Client ID of the Tozny storage player who is being cheated against.
  */
 async function tryCheat(player1, player2Id) {
   let p1Round = await getRound(player1, player1.config.clientId)
@@ -238,6 +297,10 @@ async function tryCheat(player1, player2Id) {
 
 /**
  * Get the ID of the judge.
+ * 
+ * @param {object} player Tozny storage client for the player searching for the judge ID.
+ * 
+ * @returns {string} Judge ID
  */
 async function getJudgeId(player) {
   try {
@@ -257,6 +320,11 @@ async function getJudgeId(player) {
 
 /**
  * Get the round winner determined by the judge.
+ * 
+ * @param {object} player Tozny storage client for the player searching for the winner.
+ * @param {string} round The round whose winner is being searched for.
+ * 
+ * @returns {string} The winner of the round.
  */
 async function getWinner(player, round) {
   let judgeId = await getJudgeId(player)
@@ -279,6 +347,9 @@ async function getWinner(player, round) {
 
 /**
  * Delete all all records of a specified type. 
+ * 
+ * @param {object} player Tozny storage client for the party whose records are to be deleted.
+ * @param {string} type The type of record to delete.
  */
 async function deleteAllClientRecords(client, type) {
   try {
@@ -294,7 +365,11 @@ async function deleteAllClientRecords(client, type) {
 }
 
 /**
-* Delete all game records from all participants.
+ * Delete all game records from all participants.
+ *
+ * @param {object} player1 Tozny storage client for player 1.
+ * @param {object} player1 Tozny storage client for player 2.
+ * @param {object} judge Tozny storage client for the judge.
 */
 async function deleteAllGameRecords(player1, player2, judge) {
   deleteAllClientRecords(judge, 'players')
@@ -309,6 +384,8 @@ async function deleteAllGameRecords(player1, player2, judge) {
  * Initialize: Share all records with the appropriate parties and record the player
  * and judge info.
  * Reset: Revoke all record sharing and delete all game records.
+ * 
+ * @param {String[]} args Command line arguments.
  */
 async function game(args) {
   const player1Name = args[2]
@@ -334,6 +411,8 @@ async function game(args) {
 /**
  * Load a Tozny storage client based on the user input and either
  * submit a move or show the winner of a round.
+ * 
+ * @param {String[]} args Command line arguments.
  */
 async function player(args) {
   const playerName = args[1]
@@ -360,6 +439,8 @@ async function player(args) {
 /**
  * Load a Tozny storage client based on the user input and submit 
  * a winner.
+ * 
+ * @param {String[]} args Command line arguments.
  */
 async function judge(args) {
   const judgeConfig = require(args[1])
