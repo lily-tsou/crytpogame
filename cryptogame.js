@@ -129,7 +129,7 @@ async function initJudge(judge) {
  * @param {object} player Tozny storage client for the player searching for the record.
  * @param {string} receiverId Client ID of the Tozny storage client whose record is being retrieved.
  * 
- * @returns {string} The current round number of a player.
+ * @returns {Promise<string>} The current round number of a player.
  */
 async function getRound(player, playerId) {
   try {
@@ -180,7 +180,7 @@ async function recordMove(player, playerName, move) {
  * @param {string} toSearchId Client ID of the Tozny storage client whose record is being retrieved.
  * @param {int|string} round The game round to search for.
  * 
- * @returns {string} The move of a player for round `round`.
+ * @returns {Promise<string>} The move of a player for round `round`.
  */
 async function getMove(searcher, toSearchId, round) {
   try {
@@ -207,7 +207,7 @@ async function getMove(searcher, toSearchId, round) {
  *                      name: Returns the names of the players.
  *                      id: Returns the IDs of the players
  * 
- * @returns {string[]} Either the two player names or the two player IDs.
+ * @returns {Promise<string[]>} Either the two player names or the two player IDs.
  */
 async function getPlayerInfo(judge, type) {
   try {
@@ -234,7 +234,7 @@ async function getPlayerInfo(judge, type) {
  * @param {object} judge Tozny storage client for the judge.
  * @param {string} round The number of the round to be judged.
  * 
- * @returns {string} The name of the winner.
+ * @returns {Promise<string>} The name of the winner.
  */
 async function determineWinner(judge, round) {
   let playerIds = await getPlayerInfo(judge, "id")
@@ -304,7 +304,7 @@ async function tryCheat(player1, player2Id) {
  * 
  * @param {object} player Tozny storage client for the player searching for the judge ID.
  * 
- * @returns {string} Judge ID
+ * @returns {Promise<string>} Judge ID
  */
 async function getJudgeId(player) {
   try {
@@ -328,7 +328,7 @@ async function getJudgeId(player) {
  * @param {object} player Tozny storage client for the player searching for the winner.
  * @param {string} round The round whose winner is being searched for.
  * 
- * @returns {string} The winner of the round.
+ * @returns {Promise<string>} The winner of the round.
  */
 async function getWinner(player, round) {
   let judgeId = await getJudgeId(player)
