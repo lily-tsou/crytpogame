@@ -34,6 +34,29 @@ async function giveAccess(player1, player2, judge) {
 }
 
 /**
+ * Revoke a record of a given type.
+ */
+ async function revoke(revoker, revokeFromId, type){
+  try{
+      await revoker.revoke(type, revokeFromId)
+      console.log(`${type} no longer shared with ${revokeFromId}`)
+  }catch(e) {
+      console.error(e)
+  }
+}
+
+/**
+* Revoke all access granted in initializeParties()
+*/
+async function revokeAllAccess(player1, player2, judge){
+  revoke(player1, judge.config.clientId, 'move')
+  revoke(player2, judge.config.clientId, 'move')
+  revoke(player2, player1.config.clientId, 'move')
+  revoke(judge, player1.config.clientId, 'winner')
+  revoke(judge, player2.config.clientId, 'winner')
+}
+
+/**
  * Initialize the players in the judge's records.
  * Set the player IDs and the player names.
  */
@@ -59,7 +82,7 @@ async function initPlayers(player1, player1Name, player2, player2Name, judge) {
 /**
  * Set the judge ID.
  */
- async function initJudge(judge) {
+async function initJudge(judge) {
   console.log(judge)
   try {
     const submitted = await judge.writeRecord(
@@ -216,7 +239,7 @@ async function tryCheat(player1, player2Id) {
 /**
  * Get the ID of the judge.
  */
-async function getJudgeId(player){
+async function getJudgeId(player) {
   try {
     // You cannot check that the writer of this record is the judge (since 
     // you do not yet know the judge ID) so there must be some inherent trust. 
@@ -257,39 +280,54 @@ async function getWinner(player, round) {
 /**
  * Delete all all records of a specified type. 
  */
-async function deleteAll(client, type) {
+ async function deleteAllClientRecords(client, type) {
   try {
-    const request = new Tozny.types.Search(true)
-    request.match({ type: type })
-    const resultQuery = await client.search(request)
-    const moves = await resultQuery.next()
-    for (let move of moves)
-      await client.deleteRecord(move.meta.recordId, move.meta.version)
+      const request = new Tozny.types.Search(true)
+      request.match({ type: type })
+      const resultQuery = await client.search(request)
+      const moves = await resultQuery.next()
+      for (let move of moves) 
+          await client.deleteRecord(move.meta.recordId, move.meta.version)
   } catch (e) {
-    console.error(e)
+      console.error(e)
   }
 }
 
 /**
- * Initialize the game state.
- * Share all records with the appropriate parties and record the player
+* Delete all game records from all participants.
+*/
+async function deleteAllGameRecords(player1, player2, judge){
+  deleteAllClientRecords(judge, 'players')
+  deleteAllClientRecords(judge, 'judge')
+  deleteAllClientRecords(judge, 'winner')
+  deleteAllClientRecords(player1, 'move')
+  deleteAllClientRecords(player2, 'move')
+}
+
+/**
+ * Process changes to the game state.
+ * Initialize: Share all records with the appropriate parties and record the player
  * and judge info.
+ * Reset: Revoke all record sharing and delete all game records.
  */
-async function initGame(args) {
-  const player1Name = args[1]
-  const player1Config = require(args[2])
+ async function game(args) {
+  const player1Name = args[2]
+  const player1Config = require(args[3])
   const player1 = new Tozny.storage.Client(player1Config)
-  const player2Name = args[3]
-  const player2Config = require(args[4])
+  const player2Name = args[4]
+  const player2Config = require(args[5])
   const player2 = new Tozny.storage.Client(player2Config)
-  const judgeConfig = require(args[5])
+  const judgeConfig = require(args[6])
   const judge = new Tozny.storage.Client(judgeConfig)
 
-  giveAccess(player1, player2, judge)
-  // Set the judge's `player` record with the player names and client IDs.
-  initPlayers(player1, player1Name, player2, player2Name, judge)
-  // Set the judge's `judge` record with their client ID.
-  initJudge(judge)
+  if(args[1].toLowerCase() === "init"){
+      giveAccess(player1, player2, judge)
+      initPlayers(player1, player1Name, player2, player2Name, judge)
+  }
+  else if(args[1].toLowerCase() === "reset"){
+      revokeAllAccess(player1, player2, judge)
+      deleteAllGameRecords(player1, player2, judge)
+  }
 }
 
 /**
@@ -334,8 +372,8 @@ async function judge(args) {
  */
 async function main() {
   const args = process.argv.slice(2)
-  if (args[0].toLowerCase() === "init-game")
-    initGame(args)
+  if (args[0].toLowerCase() === "game")
+    game(args)
   else if (args[0].toLowerCase() === "move" || args[0] === "show-winner" || args[0] === "cheat")
     player(args)
   else if (args[0].toLowerCase() === "record-winner")
