@@ -10,6 +10,7 @@ Once installation has finished, you will be able to run the program by using the
 <code>node .\cryptogame.js [game-args]</code><br>
 Where [game-args] are a set of arguments that indicate to the program whether you would like to submit a move as a player, determine the winner as the judge, view the winner as a player, or initialize/reset the game state.<br> 
 <h4>All [game-args] and their behavior: </h4>
+<hr>
 <strong>game init player1Name player1config player2Name player2config judgeConfig </strong> <br>
 Sets up the initial game state by sharing all appropriate records and recording the judge and player IDs. <br>
 To set up a game with players Alicia and Bruce and judge Clarence: <br>
