@@ -77,9 +77,9 @@ async function revokeAllAccess(player1, player2, judge) {
  * Write a record to a specificed Tozny storage client with a given type, data, and metadata.
  * 
  * @param {object} client     Tozny storage client to write the record to.
- * @param {string} type       type type of record to write to.
+ * @param {string} type       The type of record to write.
  * @param {object} data       The data to be encrypted before writing to the record.
- * @param {object} meta       The data to be written in plaintext to the recrd. 
+ * @param {object} meta       The data to be written in plaintext to the record. 
  *                            Default value is an empty object to account for no meta data.
  * 
  * @returns {Promise<object>} The record returned after being written to the Tozny 
@@ -101,7 +101,7 @@ async function submitRecord(client, type, data, meta = {}) {
  * @param {object} searcher   Tozny storage client of the party the retrieving the records.
  * @param {string} type       The type of record to search for.
  * @param {bool} allWriters   Whether or not records written by all clients should be searched for.
- * @param {string} writerID   The writer of the records being searched for.
+ * @param {string} writerID   The writer of the records being searched for (optional).
  * 
  * @returns {Promise<object>} All records found.
  */
@@ -159,7 +159,7 @@ async function initJudge(judge) {
  * round they submitted).
  * 
  * @param {object} player     Tozny storage client for the player searching for the record.
- * @param {string} receiverId Client ID of the Tozny storage client whose record is being retrieved.
+ * @param {string} playerId   Client ID of the Tozny storage client whose record is being retrieved.
  * 
  * @returns {Promise<string>} The current round number of a player.
  */
@@ -176,7 +176,7 @@ async function getRound(player, playerId) {
  * 
  * @param {object} player     Tozny storage client for the player recording a move.
  * @param {string} playerName The player's name.
- * @param {string} move       The game move to be submitted bye the player.
+ * @param {string} move       The game move to be submitted by the player.
  */
 async function recordMove(player, playerName, move) {
   let round = await getRound(player, player.config.clientId) + 1
@@ -211,17 +211,17 @@ async function getMove(searcher, toSearchId, round) {
  * 
  * @param {object} judge    Tozny storage client for the judge.
  * @param {string} type     The type of player info to search for. 
- *                          name: Returns the names of the players.
- *                          id: Returns the IDs of the players
+ *                          'name': Returns the names of the players.
+ *                          'id': Returns the IDs of the players
  * 
  * @returns {Promise<string[]>} Either the two player names or the two player IDs.
  */
 async function getPlayerInfo(judge, type) {
   let players = await getRecords(judge, 'players', false, judge.config.clientId)
   // Return the latest record, as this will be for the most recent game.
-  if (type.toLowerCase() === "id")
+  if (type.toLowerCase() === 'id')
     return [players[players.length - 1].data.player1Id, players[players.length - 1].data.player2Id]
-  else if (type.toLowerCase() === "name")
+  else if (type.toLowerCase() === 'name')
     return [players[players.length - 1].data.player1Name, players[players.length - 1].data.player2Name]
 
 }
@@ -236,15 +236,15 @@ async function getPlayerInfo(judge, type) {
  * @returns {Promise<string>} The name of the winner.
  */
 async function determineWinner(judge, round) {
-  let playerIds = await getPlayerInfo(judge, "id")
-  let playerNames = await getPlayerInfo(judge, "name")
+  let playerIds = await getPlayerInfo(judge, 'id')
+  let playerNames = await getPlayerInfo(judge, 'name')
   let p1Move = await getMove(judge, playerIds[0], round)
   let p2Move = await getMove(judge, playerIds[1], round)
   //A player has submitted an invalid move
   if (!moves.includes(p1Move) || !moves.includes(p2Move))
-    return "Invalid Round"
+    return 'Invalid Round'
   if (p1Move === p2Move)
-    return "Draw"
+    return 'Draw'
   if (moves[(moves.indexOf(p1Move) + 1) % 3] === p2Move)
     return playerNames[0]
   return playerNames[1]
@@ -267,7 +267,7 @@ async function recordWinner(judge, round) {
 /**
  * Attempt to cheat on a move.
  * If a player has their opponent's ID and access to their `move` records, then
- * that player is able to look up their opponents latest move and submit a counter 
+ * that player is able to look up their opponents moves and submit a counter 
  * move that will beat it.
  * 
  * @param {object} player    Tozny storage client for the player searching for the record.
@@ -320,9 +320,9 @@ async function getWinner(player, round) {
 
 
 /**
- * Delete all all records of a specified type. 
+ * Delete all records of a specified type. 
  * 
- * @param {object} player Tozny storage client for the party whose records are to be deleted.
+ * @param {object} client Tozny storage client for the party whose records are to be deleted.
  * @param {string} type   The type of record to delete.
  */
 async function deleteAllClientRecords(client, type) {
@@ -355,9 +355,9 @@ async function deleteAllGameRecords(player1, player2, judge) {
 
 /**
  * Process changes to the game state.
- * Initialize: Share all records with the appropriate parties and record the player
+ * init: Share all records with the appropriate parties and record the player
  * and judge info.
- * Reset: Revoke all record sharing and delete all game records.
+ * reset: Revoke all record sharing and delete all game records.
  * 
  * @param {String[]} args Command line arguments.
  */
@@ -411,7 +411,7 @@ async function player(args) {
 }
 
 /**
- * Load a Tozny storage client based on the user input and submit 
+ * Load a Tozny storage client for the judge and submit 
  * a winner.
  * 
  * @param {String[]} args Command line arguments.
