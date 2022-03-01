@@ -80,7 +80,7 @@ async function revokeAllAccess(player1, player2, judge) {
  * @param {string} type       The type of record to write.
  * @param {object} data       The data to be encrypted before writing to the record.
  * @param {object} meta       The data to be written in plaintext to the record. 
- *                            Default value is an empty object to account for no meta data.
+ *                            Default value is an empty object to account for no metadata.
  * 
  * @returns {Promise<object>} The record returned after being written to the Tozny 
  *                            storage client.
@@ -98,7 +98,7 @@ async function submitRecord(client, type, data, meta = {}) {
 /**
  * Get all records of a specified type.
  * 
- * @param {object} searcher   Tozny storage client of the party the retrieving the records.
+ * @param {object} searcher   Tozny storage client of the party retrieving the records.
  * @param {string} type       The type of record to search for.
  * @param {bool} allWriters   Whether or not records written by all clients should be searched for.
  * @param {string} writerID   The writer of the records being searched for (optional).
@@ -126,7 +126,7 @@ async function getRecords(searcher, type, allWriters, writerId) {
  * 
  * @param {object} player1     Tozny storage client for player 1.
  * @param {string} player1Name Player 1's name
- * @param {object} player1     Tozny storage client for player 2.
+ * @param {object} player2     Tozny storage client for player 2.
  * @param {string} player2Name Player 2's name
  * @param {object} judge       Tozny storage client for the judge.
  */
@@ -347,7 +347,7 @@ async function deleteAllClientRecords(client, type) {
  * Delete all game records from all participants.
  *
  * @param {object} player1 Tozny storage client for player 1.
- * @param {object} player1 Tozny storage client for player 2.
+ * @param {object} player2 Tozny storage client for player 2.
  * @param {object} judge   Tozny storage client for the judge.
 */
 async function deleteAllGameRecords(player1, player2, judge) {
@@ -388,7 +388,7 @@ async function game(args) {
 }
 
 /**
- * Load a Tozny storage client based on the user input and either
+ * Load a Tozny storage client for a player and either
  * submit a move or show the winner of a round.
  * 
  * @param {String[]} args Command line arguments.

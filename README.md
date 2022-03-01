@@ -5,7 +5,7 @@
 The game allows two players to compete against each other in a series of rounds, with a neutral judge declaring the winner of each round. <br>
 <hr>
 <h2> To run this code: </h2>
-First clone this repo and then run <code>npm install</code> install the Tozny SDK node dependency. <br>
+First clone this repo and then run <code>npm install</code> to install the Tozny SDK node dependency. <br>
 Once installation has finished, you will be able to run the program by using the following command:<br>
 <code>node .\cryptogame.js [game-args]</code><br>
 Where [game-args] are a set of arguments that indicate to the program whether you would like to submit a move as a player, determine the winner as the judge, view the winner as a player, or initialize/reset the game state.<br> 
@@ -21,7 +21,7 @@ To submit a move of "rock" for player Alicia:<br>
 <code>node .\cryptogame.js move Alicia .\aliciaconfig.js rock</code><br><br>
 <strong>record-winner judgeConfig round</strong><br>
 Determine the winner of a given round and submit it to the judge's records. <br>
-To find the winner of round 1 by judge Clarence:<br>
+To find the winner of round 1 determined by judge Clarence:<br>
 <code>node .\cryptogame.js record-winner .\clarenceconfig.js 1</code><br><br>
 <strong>show-winner playerName playerConfig round</strong><br>
 Show a player the winner recorded by the judge for a given round. <br>
