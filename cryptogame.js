@@ -6,9 +6,9 @@ let moves = ["scissors", "paper", "rock"];
 /**
  * Share a record of a given type.
  * 
- * @param {object} sharer Tozny storage client sharing their record.
+ * @param {object} sharer     Tozny storage client sharing their record.
  * @param {string} receiverId Client ID of the Tozny storage client receiving the record.
- * @param {string} type The type of record to share.
+ * @param {string} type       The type of record to share.
  */
 async function share(sharer, receiverId, type) {
   try {
@@ -29,7 +29,7 @@ async function share(sharer, receiverId, type) {
  * 
  * @param {object} player1 Tozny storage client for player 1.
  * @param {object} player1 Tozny storage client for player 2.
- * @param {object} judge Tozny storage client for the judge.
+ * @param {object} judge   Tozny storage client for the judge.
  */
 async function giveAccess(player1, player2, judge) {
   share(player1, judge.config.clientId, 'move')
@@ -44,10 +44,10 @@ async function giveAccess(player1, player2, judge) {
 /**
  * Revoke a record of a given type.
  * 
- * @param {object} revoker Tozny storage client revoking their record.
+ * @param {object} revoker      Tozny storage client revoking their record.
  * @param {string} revokeFromId Client ID of the Tozny storage client that will no 
  *                              longer have access to the record.
- * @param {string} type The type of record to revoke.
+ * @param {string} type         The type of record to revoke.
  */
 async function revoke(revoker, revokeFromId, type) {
   try {
@@ -61,9 +61,9 @@ async function revoke(revoker, revokeFromId, type) {
 /**
  * Revoke all access granted in initializeParties()
  * 
- * @param {object} player1 Tozny storage client for player 1.
- * @param {object} player1 Tozny storage client for player 2.
- * @param {object} judge Tozny storage client for the judge.
+ * @param {object} player1  Tozny storage client for player 1.
+ * @param {object} player1  Tozny storage client for player 2.
+ * @param {object} judge    Tozny storage client for the judge.
 */
 async function revokeAllAccess(player1, player2, judge) {
   revoke(player1, judge.config.clientId, 'move')
@@ -74,32 +74,74 @@ async function revokeAllAccess(player1, player2, judge) {
 }
 
 /**
- * Initialize the players in the judge's records.
- * Set the player IDs and the player names.
+ * Write a record to a specificed Tozny storage client with a given type, data, and metadata.
  * 
- * @param {object} player1 Tozny storage client for player 1.
- * @param {string} player1Name Player 1's name
- * @param {object} player1 Tozny storage client for player 2.
- * @param {string} player2Name Player 2's name
- * @param {object} judge Tozny storage client for the judge.
+ * @param {object} client     Tozny storage client to write the record to.
+ * @param {string} type       type type of record to write to.
+ * @param {object} data       The data to be encrypted before writing to the record.
+ * @param {object} meta       The data to be written in plaintext to the recrd. 
+ *                            Default value is an empty object to account for no meta data.
+ * 
+ * @returns {Promise<object>} The record returned after being written to the Tozny 
+ *                            storage client.
  */
-async function initPlayers(player1, player1Name, player2, player2Name, judge) {
+async function submitRecord(client, type, data, meta = {}) {
   try {
-    const submitted = await judge.writeRecord(
-      'players',
-      {
-        player1Id: player1.config.clientId,
-        player2Id: player2.config.clientId,
-        player1Name: player1Name,
-        player2Name: player2Name
-      }
-    )
-    const players = await judge.readRecord(submitted.meta.recordId)
-    console.log(`Player 1 recorded with ID ${players.data.player1Id} and name ${players.data.player1Name}`)
-    console.log(`Player 2 recorded with ID ${players.data.player2Id} and name ${players.data.player2Name}`)
+    const submitted = await client.writeRecord(type, data, meta)
+    const record = await client.readRecord(submitted.meta.recordId)
+    return record
   } catch (e) {
     console.error(e)
   }
+}
+
+/**
+ * Get all records of a specified type.
+ * 
+ * @param {object} searcher   Tozny storage client of the party the retrieving the records.
+ * @param {string} type       The type of record to search for.
+ * @param {bool} allWriters   Whether or not records written by all clients should be searched for.
+ *                            True: search for all writers. False: Search for only the specified writer.
+ * @param {string} writerID   The writer of the records being searched for.
+ * 
+ * @returns {Promise<object>} All records found.
+ */
+async function getRecords(searcher, type, allWriters, writerId) {
+  try {
+    const request = new Tozny.types.Search(true, true)
+    if (allWriters)
+      request.match({ type: type })
+    else
+      request.match({ type: type, writers: writerId }, 'AND', 'EXACT')
+    const resultQuery = await searcher.search(request)
+    const record = await resultQuery.next()
+    return record
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+/**
+ * Initialize the players in the judge's records.
+ * Set the player IDs and the player names.
+ * 
+ * @param {object} player1     Tozny storage client for player 1.
+ * @param {string} player1Name Player 1's name
+ * @param {object} player1     Tozny storage client for player 2.
+ * @param {string} player2Name Player 2's name
+ * @param {object} judge       Tozny storage client for the judge.
+ */
+async function initPlayers(player1, player1Name, player2, player2Name, judge) {
+  let toSubmit = {
+    player1Id: player1.config.clientId,
+    player2Id: player2.config.clientId,
+    player1Name: player1Name,
+    player2Name: player2Name
+  }
+  let players = await submitRecord(judge, 'players', toSubmit)
+  console.log(players)
+  console.log(`Player 1 recorded with ID ${players.data.player1Id} and name ${players.data.player1Name}`)
+  console.log(`Player 2 recorded with ID ${players.data.player2Id} and name ${players.data.player2Name}`)
 }
 
 /**
@@ -108,131 +150,92 @@ async function initPlayers(player1, player1Name, player2, player2Name, judge) {
  * @param {object} judge Tozny storage client for the judge.
  */
 async function initJudge(judge) {
-  try {
-    const submitted = await judge.writeRecord(
-      'judge',
-      {
-        judgeId: judge.config.clientId
-      }
-    )
-    const judgeInfo = await judge.readRecord(submitted.meta.recordId)
-    console.log(`Judge recorded with ID ${judgeInfo.data.judgeId}`)
-  } catch (e) {
-    console.error(e)
-  }
+  let toSubmit = { judgeId: judge.config.clientId }
+  let judgeInfo = await submitRecord(judge, 'judge', toSubmit)
+  console.log(`Judge recorded with ID ${judgeInfo.data.judgeId}`)
 }
 
 /**
  * Get the current round number of a player (the number of the last
  * round they submitted).
  * 
- * @param {object} player Tozny storage client for the player searching for the record.
+ * @param {object} player     Tozny storage client for the player searching for the record.
  * @param {string} receiverId Client ID of the Tozny storage client whose record is being retrieved.
  * 
  * @returns {Promise<string>} The current round number of a player.
  */
 async function getRound(player, playerId) {
-  try {
-    const request = new Tozny.types.Search(true, true)
-    request.match({ type: 'move', writers: playerId }, 'AND', 'EXACT')
-    const resultQuery = await player.search(request)
-    const found = await resultQuery.next()
-    return parseInt(found[found.length - 1].meta.plain.round)
-  } catch (e) {
-    console.error(e)
-  }
+  let rounds = await getRecords(player, 'move', false, playerId)
+  if(rounds.length)
+    return parseInt(rounds[rounds.length - 1].meta.plain.round)
+  else
+    return 0
 }
 
 /**
  * Submit a record of type `move`.
  * 
- * @param {object} player Tozny storage client for the player recording a move.
+ * @param {object} player     Tozny storage client for the player recording a move.
  * @param {string} playerName The player's name.
- * @param {string} move The game move to be submitted bye the player.
+ * @param {string} move       The game move to be submitted bye the player.
  */
 async function recordMove(player, playerName, move) {
   let round = await getRound(player, player.config.clientId) + 1
-  if (isNaN(round)){
+  if (isNaN(round)) {
     round = 1
   }
-  try {
-    const submitted = await player.writeRecord(
-      'move',
-      {
-        move: move.toLowerCase()
-      },
-      {
-        round: round.toString()
-      }
-    )
-    const read = await player.readRecord(submitted.meta.recordId)
-    console.log(`${playerName} recorded ${read.data.move} for round #${read.meta.plain.round}`)
-  } catch (e) {
-    console.error(e)
-  }
+  let data = { move: move.toLowerCase() }
+  let meta = { round: round.toString() }
+  let read = await submitRecord(player, 'move', data, meta)
+  console.log(`${playerName} recorded ${read.data.move} for round #${read.meta.plain.round}`)
 }
 
 /**
  * Get a player's move for a specified round.
  * 
- * @param {object} searcher Tozny storage client for the party searching for a move.
- *                          This may be a player or the judge.
+ * @param {object} searcher   Tozny storage client for the party searching for a move.
+ *                            This may be a player or the judge.
  * @param {string} toSearchId Client ID of the Tozny storage client whose record is being retrieved.
- * @param {int|string} round The game round to search for.
+ * @param {int|string} round  The game round to search for.
  * 
  * @returns {Promise<string>} The move of a player for round `round`.
  */
 async function getMove(searcher, toSearchId, round) {
-  try {
-    const request = new Tozny.types.Search(true, true)
-    request.match({ type: 'move', writers: toSearchId }, 'AND', 'EXACT')
-    const resultQuery = await searcher.search(request)
-    const moves = await resultQuery.next()
-    for (let move of moves) {
-      if (parseInt(move.meta.plain.round) === parseInt(round)) {
-        return move.data.move;
-      }
+  let moves = await getRecords(searcher, 'move', false, toSearchId)
+  for (let move of moves) {
+    if (parseInt(move.meta.plain.round) === parseInt(round)) {
+      return move.data.move;
     }
-    console.error(`No move submitted for ${toSearchId} for round ${round}`)
-  } catch (e) {
-    console.error(e)
   }
+  console.error(`No move submitted for ${toSearchId} for round ${round}`)
 }
 
 /**
  * Get the info (names or IDs) of the players.
  * 
- * @param {object} judge Tozny storage client for the judge.
- * @param {string} type The type of player info to search for. 
- *                      name: Returns the names of the players.
- *                      id: Returns the IDs of the players
+ * @param {object} judge    Tozny storage client for the judge.
+ * @param {string} type     The type of player info to search for. 
+ *                          name: Returns the names of the players.
+ *                          id: Returns the IDs of the players
  * 
  * @returns {Promise<string[]>} Either the two player names or the two player IDs.
  */
 async function getPlayerInfo(judge, type) {
-  try {
-    const request = new Tozny.types.Search(true)
-    request.match({ type: 'players' })
-    const resultQuery = await judge.search(request)
-    const found = await resultQuery.next()
+  let players = await getRecords(judge, 'players', false, judge.config.clientId)
+  // Return the latest record, as this will be for the most recent game.
+  if (type.toLowerCase() === "id")
+    return [players[players.length - 1].data.player1Id, players[players.length - 1].data.player2Id]
+  else if (type.toLowerCase() === "name")
+    return [players[players.length - 1].data.player1Name, players[players.length - 1].data.player2Name]
 
-    // Return the latest record, as this will be for the most recent game.
-    if (type.toLowerCase() === "id")
-      return [found[found.length - 1].data.player1Id, found[found.length - 1].data.player2Id]
-    else if (type.toLowerCase() === "name")
-      return [found[found.length - 1].data.player1Name, found[found.length - 1].data.player2Name]
-
-  } catch (e) {
-    console.error(e)
-  }
 }
 
 /**
  * Determine the winner of a round using these rules:
  * Rock beats scissors, scissors beats paper, paper beats rock.
  * 
- * @param {object} judge Tozny storage client for the judge.
- * @param {string} round The number of the round to be judged.
+ * @param {object} judge      Tozny storage client for the judge.
+ * @param {string} round      The number of the round to be judged.
  * 
  * @returns {Promise<string>} The name of the winner.
  */
@@ -260,21 +263,10 @@ async function determineWinner(judge, round) {
  */
 async function recordWinner(judge, round) {
   let winner = await determineWinner(judge, round)
-  try {
-    const submitted = await judge.writeRecord(
-      'winner',
-      {
-        winner: winner
-      },
-      {
-        round: round.toString()
-      }
-    )
-    const read = await judge.readRecord(submitted.meta.recordId)
-    console.log(`${read.data.winner} submitted for round #${read.meta.plain.round}`)
-  } catch (e) {
-    console.error(e)
-  }
+  let data = { winner: winner }
+  let meta = { round: round }
+  let read = await submitRecord(judge, 'winner', data, meta)
+  console.log(`${read.data.winner} submitted for round #${read.meta.plain.round}`)
 }
 
 /**
@@ -283,7 +275,7 @@ async function recordWinner(judge, round) {
  * that player is able to look up their opponents latest move and submit a counter 
  * move that will beat it.
  * 
- * @param {object} player Tozny storage client for the player searching for the record.
+ * @param {object} player    Tozny storage client for the player searching for the record.
  * @param {string} player2Id Client ID of the Tozny storage player who is being cheated against.
  */
 async function tryCheat(player1, player2Id) {
@@ -302,58 +294,41 @@ async function tryCheat(player1, player2Id) {
 /**
  * Get the ID of the judge.
  * 
- * @param {object} player Tozny storage client for the player searching for the judge ID.
+ * @param {object} player     Tozny storage client for the player searching for the judge ID.
  * 
  * @returns {Promise<string>} Judge ID
  */
 async function getJudgeId(player) {
-  try {
-    // You cannot check that the writer of this record is the judge (since 
-    // you do not yet know the judge ID) so there must be some inherent trust. 
-    // A better solution may be to have a hardcopy of the judge ID or to 
-    // do an initial key exchange.
-    const request = new Tozny.types.Search(true, true)
-    request.match({ type: 'judge' })
-    const resultQuery = await player.search(request)
-    const found = await resultQuery.next()
-    return found[found.length - 1].data.judgeId
-  } catch (e) {
-    console.error(e)
-  }
+  let judgeInfo = await getRecords(player, 'judge', true)
+  return judgeInfo[judgeInfo.length - 1].data.judgeId
 }
 
 /**
  * Get the round winner determined by the judge.
  * 
- * @param {object} player Tozny storage client for the player searching for the winner.
- * @param {string} round The round whose winner is being searched for.
+ * @param {object} player     Tozny storage client for the player searching for the winner.
+ * @param {string} round      The round whose winner is being searched for.
  * 
  * @returns {Promise<string>} The winner of the round.
  */
 async function getWinner(player, round) {
   let judgeId = await getJudgeId(player)
-  try {
-    const request = new Tozny.types.Search(true, true)
-    request.match({ type: 'winner', writers: judgeId }, 'AND', 'EXACT')
-    const resultQuery = await player.search(request)
-    const winners = await resultQuery.next()
-    for (let winner of winners) {
-      if (winner.meta.plain.round === round) {
-        return winner.data.winner;
-      }
+  let winners = await getRecords(player, 'winner', false, judgeId)
+  for (let winner of winners) {
+    if (winner.meta.plain.round === round) {
+      return winner.data.winner;
     }
-    console.error(`No winner found for round ${round}`)
-    return null
-  } catch (e) {
-    console.error(e)
   }
+  console.error(`No winner found for round ${round}`)
+  return null
 }
+
 
 /**
  * Delete all all records of a specified type. 
  * 
  * @param {object} player Tozny storage client for the party whose records are to be deleted.
- * @param {string} type The type of record to delete.
+ * @param {string} type   The type of record to delete.
  */
 async function deleteAllClientRecords(client, type) {
   try {
@@ -373,7 +348,7 @@ async function deleteAllClientRecords(client, type) {
  *
  * @param {object} player1 Tozny storage client for player 1.
  * @param {object} player1 Tozny storage client for player 2.
- * @param {object} judge Tozny storage client for the judge.
+ * @param {object} judge   Tozny storage client for the judge.
 */
 async function deleteAllGameRecords(player1, player2, judge) {
   deleteAllClientRecords(judge, 'players')
