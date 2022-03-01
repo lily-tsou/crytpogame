@@ -43,7 +43,7 @@ async function giveAccess(player1, player2, judge) {
 
 /**
  * Revoke a record of a given type.
- * 
+ *
  * @param {object} revoker      Tozny storage client revoking their record.
  * @param {string} revokeFromId Client ID of the Tozny storage client that will no 
  *                              longer have access to the record.
@@ -101,15 +101,14 @@ async function submitRecord(client, type, data, meta = {}) {
  * @param {object} searcher   Tozny storage client of the party the retrieving the records.
  * @param {string} type       The type of record to search for.
  * @param {bool} allWriters   Whether or not records written by all clients should be searched for.
- *                            True: search for all writers. False: Search for only the specified writer.
  * @param {string} writerID   The writer of the records being searched for.
  * 
  * @returns {Promise<object>} All records found.
  */
 async function getRecords(searcher, type, allWriters, writerId) {
   try {
-    const request = new Tozny.types.Search(true, true)
-    if (allWriters)
+    const request = new Tozny.types.Search(true, allWriters)
+    if (!allWriters)
       request.match({ type: type })
     else
       request.match({ type: type, writers: writerId }, 'AND', 'EXACT')
@@ -165,7 +164,7 @@ async function initJudge(judge) {
  * @returns {Promise<string>} The current round number of a player.
  */
 async function getRound(player, playerId) {
-  let rounds = await getRecords(player, 'move', false, playerId)
+  let rounds = await getRecords(player, 'move', true, playerId)
   if(rounds.length)
     return parseInt(rounds[rounds.length - 1].meta.plain.round)
   else
@@ -181,9 +180,6 @@ async function getRound(player, playerId) {
  */
 async function recordMove(player, playerName, move) {
   let round = await getRound(player, player.config.clientId) + 1
-  if (isNaN(round)) {
-    round = 1
-  }
   let data = { move: move.toLowerCase() }
   let meta = { round: round.toString() }
   let read = await submitRecord(player, 'move', data, meta)
@@ -201,7 +197,7 @@ async function recordMove(player, playerName, move) {
  * @returns {Promise<string>} The move of a player for round `round`.
  */
 async function getMove(searcher, toSearchId, round) {
-  let moves = await getRecords(searcher, 'move', false, toSearchId)
+  let moves = await getRecords(searcher, 'move', true, toSearchId)
   for (let move of moves) {
     if (parseInt(move.meta.plain.round) === parseInt(round)) {
       return move.data.move;
@@ -251,8 +247,7 @@ async function determineWinner(judge, round) {
     return "Draw"
   if (moves[(moves.indexOf(p1Move) + 1) % 3] === p2Move)
     return playerNames[0]
-  else
-    return playerNames[1]
+  return playerNames[1]
 }
 
 /**
@@ -281,8 +276,8 @@ async function recordWinner(judge, round) {
 async function tryCheat(player1, player2Id) {
   let p1Round = await getRound(player1, player1.config.clientId)
   let p2Round = await getRound(player1, player2Id)
-  if (p1Round === p2Round - 1) {
-    let p2Move = await getMove(player1, player2Id, p2Round)
+  if (p1Round < p2Round) {
+    let p2Move = await getMove(player1, player2Id, p1Round + 1)
     let move = moves[(moves.indexOf(p2Move) - 1 + 3) % 3]
     recordMove(player1, "Alicia", move)
   }
@@ -313,7 +308,7 @@ async function getJudgeId(player) {
  */
 async function getWinner(player, round) {
   let judgeId = await getJudgeId(player)
-  let winners = await getRecords(player, 'winner', false, judgeId)
+  let winners = await getRecords(player, 'winner', true, judgeId)
   for (let winner of winners) {
     if (winner.meta.plain.round === round) {
       return winner.data.winner;
