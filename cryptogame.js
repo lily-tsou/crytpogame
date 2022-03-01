@@ -204,6 +204,7 @@ async function getMove(searcher, toSearchId, round) {
     }
   }
   console.error(`No move submitted for ${toSearchId} for round ${round}`)
+  return null
 }
 
 /**
@@ -241,13 +242,16 @@ async function determineWinner(judge, round) {
   let p1Move = await getMove(judge, playerIds[0], round)
   let p2Move = await getMove(judge, playerIds[1], round)
   //A player has submitted an invalid move
-  if (!moves.includes(p1Move) || !moves.includes(p2Move))
-    return 'Invalid Round'
-  if (p1Move === p2Move)
-    return 'Draw'
-  if (moves[(moves.indexOf(p1Move) + 1) % 3] === p2Move)
-    return playerNames[0]
-  return playerNames[1]
+  if (p1Move && p2Move){
+    if (!moves.includes(p1Move) || !moves.includes(p2Move))
+      return 'Invalid Round'
+    if (p1Move === p2Move)
+      return 'Draw'
+    if (moves[(moves.indexOf(p1Move) + 1) % 3] === p2Move)
+      return playerNames[0]
+    return playerNames[1]
+  }
+  return null
 }
 
 /**
@@ -258,10 +262,12 @@ async function determineWinner(judge, round) {
  */
 async function recordWinner(judge, round) {
   let winner = await determineWinner(judge, round)
-  let data = { winner: winner }
-  let meta = { round: round }
-  let read = await submitRecord(judge, 'winner', data, meta)
-  console.log(`${read.data.winner} submitted for round #${read.meta.plain.round}`)
+  if(winner){
+    let data = { winner: winner }
+    let meta = { round: round }
+    let read = await submitRecord(judge, 'winner', data, meta)
+    console.log(`${read.data.winner} submitted for round #${read.meta.plain.round}`)
+  }
 }
 
 /**
@@ -317,7 +323,6 @@ async function getWinner(player, round) {
   console.error(`No winner found for round ${round}`)
   return null
 }
-
 
 /**
  * Delete all records of a specified type. 
